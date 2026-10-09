@@ -166,23 +166,23 @@ public class ArtifactManager implements AutoCloseable, org.apache.sling.feature.
         });
     }
 
-    private final URL getArtifactFromProviders(final String url, final String relativeCachePath) throws IOException {
-        final int pos = url.indexOf(":");
-        final String scheme = url.substring(0, pos);
-
+    ArtifactProvider getArtifactProvider(final String scheme) {
         ArtifactProvider provider = this.providers.get(scheme);
         if (provider == null) {
             provider = this.providers.get("*");
         }
+        return provider;
+    }
+
+    private final URL getArtifactFromProviders(final String url, final String relativeCachePath) throws IOException {
+        final int pos = url.indexOf(":");
+        final String scheme = url.substring(0, pos);
+
+        final ArtifactProvider provider = this.getArtifactProvider(scheme);
         if (provider == null) {
             throw new IOException("No URL provider found for " + url);
         }
-        URL file = null;
-        try {
-            file = provider.getArtifactFile(url, relativeCachePath);
-        } catch (final IOException e) {
-            throw e;
-        }
+        URL file = provider.getArtifactFile(url, relativeCachePath);
         if (file == null) {
             file = provider.getArtifact(url, relativeCachePath);
         }
@@ -252,10 +252,7 @@ public class ArtifactManager implements AutoCloseable, org.apache.sling.feature.
             final int pos = artifactUrl.indexOf(":");
             final String scheme = artifactUrl.substring(0, pos);
 
-            ArtifactProvider handler = this.providers.get(scheme);
-            if (handler == null) {
-                handler = this.providers.get("*");
-            }
+            ArtifactProvider handler = this.getArtifactProvider(scheme);
             if (handler == null) {
                 failures.put(repoUrl, new IOException("No URL handler found for " + artifactUrl));
                 continue;
