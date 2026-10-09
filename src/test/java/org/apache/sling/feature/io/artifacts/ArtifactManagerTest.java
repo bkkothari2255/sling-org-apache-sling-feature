@@ -36,6 +36,7 @@ import org.junit.Test;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -172,5 +173,35 @@ public class ArtifactManagerTest {
         assertNotNull(am.getArtifactHandler(fooProtocol + ":/felix.jar"));
 
         am.shutdown();
+    }
+
+    @Test
+    public void testArtifactNotFoundDetailedException() throws IOException {
+        final String repo1 = "http://repo1.example.com";
+        final String repo2 = "http://repo2.example.com";
+        final ArtifactManagerConfig config = mock(ArtifactManagerConfig.class);
+        when(config.getRepositoryUrls()).thenReturn(new String[] {repo1, repo2});
+
+        final ArtifactProvider provider = mock(ArtifactProvider.class);
+        when(provider.getArtifactFile(
+                        repo1 + "/group/artifact/1.0.0/artifact-1.0.0.jar", "group/artifact/1.0.0/artifact-1.0.0.jar"))
+                .thenThrow(new IOException("HTTP 404 Not Found from " + repo1));
+        when(provider.getArtifactFile(
+                        repo2 + "/group/artifact/1.0.0/artifact-1.0.0.jar", "group/artifact/1.0.0/artifact-1.0.0.jar"))
+                .thenThrow(new IOException("HTTP 401 Unauthorized from " + repo2));
+
+        final Map<String, ArtifactProvider> providers = new HashMap<>();
+        providers.put("*", provider);
+
+        final ArtifactManager mgr = new ArtifactManager(config, providers);
+        try {
+            mgr.getArtifactHandler("mvn:group/artifact/1.0.0");
+            fail("Expected IOException");
+        } catch (final IOException e) {
+            assertTrue(e.getMessage().contains("mvn:group/artifact/1.0.0"));
+            assertTrue(e.getMessage().contains("HTTP 404 Not Found from " + repo1));
+            assertTrue(e.getMessage().contains("HTTP 401 Unauthorized from " + repo2));
+            assertEquals(2, e.getSuppressed().length);
+        }
     }
 }
