@@ -215,10 +215,14 @@ public class ArtifactManagerTest {
             }
 
             @Override
-            public void init(final org.apache.sling.feature.io.artifacts.spi.ArtifactProviderContext context) {}
+            public void init(final org.apache.sling.feature.io.artifacts.spi.ArtifactProviderContext context) {
+                // Not needed for testing default methods
+            }
 
             @Override
-            public void shutdown() {}
+            public void shutdown() {
+                // Not needed for testing default methods
+            }
 
             @Override
             public URL getArtifact(final String url, final String relativeCachePath) {
